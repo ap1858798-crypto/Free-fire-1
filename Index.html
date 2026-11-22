@@ -4,291 +4,586 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Survival Battle 3D</title>
+<title>Battle Royale 3D</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;overflow:hidden;background:#87ceeb;font-family:Arial;touch-action:none}
+body{margin:0;overflow:hidden;background:#111;color:white;font-family:Arial;touch-action:none}
 canvas{display:block}
-#hud{position:absolute;top:10px;left:10px;background:#000b;color:white;padding:10px;border-radius:10px;line-height:1.7}
-#controls{position:absolute;bottom:12px;width:100%;display:flex;justify-content:space-between;padding:0 10px}
-.pad{display:grid;grid-template-columns:48px 48px 48px;gap:5px}
-button{height:48px;min-width:48px;background:#152433dd;color:white;border:1px solid white;border-radius:12px;font-size:18px}
-.empty{visibility:hidden}
-.actions{display:flex;flex-direction:column;gap:5px}
-#fire{background:#c21e1e}
+#hud{position:fixed;inset:0;pointer-events:none}
+#top{position:absolute;top:10px;left:10px;background:#000a;padding:10px;border-radius:10px}
+#health{height:12px;width:145px;background:#555;margin-top:5px;border-radius:8px}
+#hp{height:100%;width:100%;background:#19e65c;border-radius:8px}
+#ammo{position:absolute;right:10px;top:10px;background:#000a;padding:10px;border-radius:10px}
+#map{position:absolute;right:12px;top:85px;width:100px;height:100px;border:2px solid white;border-radius:50%;background:#244c28}
+#message{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#000a;padding:8px;border-radius:8px;white-space:nowrap}
+#controls{position:absolute;bottom:15px;left:12px;right:12px;display:flex;align-items:end;justify-content:space-between}
+#joy{width:120px;height:120px;border:3px solid #ffffff99;background:#ffffff22;border-radius:50%;position:relative;pointer-events:auto}
+#stick{position:absolute;width:45px;height:45px;left:34px;top:34px;background:#ffffffaa;border-radius:50%}
+.buttons{display:grid;grid-template-columns:repeat(2,68px);gap:7px;pointer-events:auto}
+button{background:#111c;color:white;border:2px solid #ffffff99;border-radius:12px;padding:13px 5px;font-weight:bold}
+#fire{background:#c62828}
+#start{position:fixed;inset:0;z-index:5;background:#06140eee;display:grid;place-items:center;text-align:center}
+#start button{font-size:22px;padding:17px 35px;background:#e65100}
 </style>
 </head>
 <body>
+
+<div id="start">
+ <div>
+  <h1>🔥 BATTLE ROYALE 3D 🔥</h1>
+  <h3>Survival Mission</h3>
+  <p>दुश्मनों को हराओ और जीत हासिल करो!</p>
+  <button onclick="startGame()">PLAY GAME</button>
+ </div>
+</div>
+
 <div id="hud">
-❤️ Health: <span id="hp">100</span><br>
-🔫 Ammo: <span id="ammo">30</span><br>
-🏆 Kills: <span id="kills">0</span><br>
-🚗 <span id="mode">Walking</span>
+ <div id="top">
+  ❤️ HEALTH: <span id="healthText">100</span>
+  <div id="health"><div id="hp"></div></div>
+  👥 दुश्मन: <span id="count">8</span>
+ </div>
+ <div id="ammo">🔫 <span id="weapon">AK47</span><br>AMMO: <span id="bullets">30</span></div>
+ <div id="message">मिशन शुरू करो!</div>
+ <canvas id="map" width="100" height="100"></canvas>
+ <div id="controls">
+  <div id="joy"><div id="stick"></div></div>
+  <div class="buttons">
+   <button id="fire">🔥 FIRE</button>
+   <button id="jump">⬆ JUMP</button>
+   <button id="change">🔄 GUN</button>
+   <button id="car">🚗 CAR</button>
+   <button id="enter">🏠 घर</button>
+   <button id="heal">💊 HEAL</button>
+  </div>
+ </div>
 </div>
-<div id="controls">
-<div class="pad">
-<button class="empty"></button><button data-k="up">⬆️</button><button class="empty"></button>
-<button data-k="left">⬅️</button><button data-k="down">⬇️</button><button data-k="right">➡️</button>
-</div>
-<div class="actions">
-<button id="jump">Jump</button>
-<button id="carBtn">🚗 Car</button>
-<button id="fire">🔥 Fire</button>
-<button id="reload">Reload</button>
-</div>
-</div>
+
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x87ceeb);
-scene.fog=new THREE.Fog(0x87ceeb,60,180);
-const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,400);
+scene.background=new THREE.Color(0x91c8e8);
+scene.fog=new THREE.Fog(0x91c8e8,80,180);
+
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x54613b,2));
+scene.add(new THREE.HemisphereLight(0xffffff,0x526344,2));
 const sun=new THREE.DirectionalLight(0xffffff,2);
-sun.position.set(30,50,20);
+sun.position.set(30,60,20);
 sun.castShadow=true;
 scene.add(sun);
 
-const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.8});
-function add(parent,geo,color,x,y,z){
-const m=new THREE.Mesh(geo,mat(color));
-m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;
+const material=c=>new THREE.MeshStandardMaterial({color:c,roughness:.85});
+
+function addBox(parent,w,h,d,color,x,y,z){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));
+ o.position.set(x,y,z);
+ o.castShadow=true;
+ o.receiveShadow=true;
+ parent.add(o);
+ return o;
 }
-function human(shirt=0x2466b8){
-const g=new THREE.Group();
-add(g,new THREE.CylinderGeometry(.25,.32,.8,12),shirt,0,1.2,0);
-add(g,new THREE.SphereGeometry(.25,16,12),0xd9a078,0,1.82,0);
-add(g,new THREE.SphereGeometry(.27,16,12),0x222222,0,2.03,0);
-// Face
-add(g,new THREE.SphereGeometry(.035,8,8),0x111111,-.085,1.87,.22);
-add(g,new THREE.SphereGeometry(.035,8,8),0x111111,.085,1.87,.22);
-add(g,new THREE.ConeGeometry(.045,.12,8),0xd9a078,0,1.82,.27);
-add(g,new THREE.BoxGeometry(.1,.025,.02),0x632c27,0,1.72,.24);
-for(const s of [-1,1]){
-add(g,new THREE.CapsuleGeometry(.1,.42,4,8),0xd9a078,s*.39,1.25,0);
-add(g,new THREE.SphereGeometry(.12,10,10),0xd9a078,s*.4,.93,0);
-add(g,new THREE.CylinderGeometry(.12,.14,.7,10),0x303d52,s*.16,.43,0);
-add(g,new THREE.BoxGeometry(.22,.14,.32),0x171717,s*.16,.07,.1);
-for(let i=0;i<4;i++)
-add(g,new THREE.CylinderGeometry(.018,.018,.12,6),0xd9a078,s*.4+(i-1.5)*.04,.83,.02);
-}
-return g;
+function addSphere(parent,r,color,x,y,z){
+ const o=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),material(color));
+ o.position.set(x,y,z);
+ o.castShadow=true;
+ parent.add(o);
+ return o;
 }
 
-const ground=add(scene,new THREE.PlaneGeometry(300,300),0x4b873b,0,-.08,0);
+// जमीन
+const ground=new THREE.Mesh(
+ new THREE.PlaneGeometry(220,220),material(0x56843d));
 ground.rotation.x=-Math.PI/2;
+ground.receiveShadow=true;
+scene.add(ground);
 
-const road=add(scene,new THREE.PlaneGeometry(16,250),0x444444,0,-.04,0);
+// सड़क
+const road=new THREE.Mesh(
+ new THREE.PlaneGeometry(12,220),material(0x383838));
 road.rotation.x=-Math.PI/2;
+road.position.y=.03;
+scene.add(road);
 
-const player=human();
+// पेड़
+for(let i=0;i<110;i++){
+ const x=(Math.random()-.5)*190;
+ const z=(Math.random()-.5)*190;
+ if(Math.abs(x)<10)continue;
+ addBox(scene,.7,3,.7,0x704323,x,1.5,z);
+ const leaves=addSphere(scene,2,0x17652b,x,4,z);
+ leaves.scale.y=1.3;
+}
+
+// घर
+const houses=[];
+for(let i=0;i<9;i++){
+ const x=(Math.random()-.5)*100;
+ const z=(Math.random()-.5)*100;
+ const g=new THREE.Group();
+ scene.add(g);
+ const wall=material(0xd2b68c);
+ const roof=material(0x713b2b);
+ function part(w,h,d,m,px,py,pz){
+  const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+  o.position.set(px,py,pz);
+  o.castShadow=true;
+  g.add(o);
+ }
+ // पीछे और बगल की दीवारें
+ part(10,5,.4,wall,0,2.5,-5);
+ part(10,5,.4,wall,0,2.5,5);
+ part(.4,5,10,wall,-5,2.5,0);
+ part(.4,5,10,wall,5,2.5,0);
+ // सामने दरवाजे के दोनों ओर दीवार
+ part(3.5,5,.4,wall,-3.25,2.5,5);
+ part(3.5,5,.4,wall,3.25,2.5,5);
+ part(3,0.5,10,material(0x92724e),0,-.25,0);
+ part(11,.5,11,roof,0,5.2,0);
+ // अंदर सामान
+ part(2,.7,1.5,material(0x79502e),-2,.4,-1);
+ part(1,.8,1,material(0x3a5a86),2,.4,-2);
+ g.position.set(x,0,z);
+ houses.push({x,z,g});
+}
+
+// इंसान
+function makeHuman(color){
+ const g=new THREE.Group();
+ const skin=material(0xd69b70);
+ const shirt=material(color);
+ const pants=material(0x263b60);
+ const black=material(0x111111);
+
+ function part(geo,m,x,y,z){
+  const o=new THREE.Mesh(geo,m);
+  o.position.set(x,y,z);
+  o.castShadow=true;
+  g.add(o);
+  return o;
+ }
+ part(new THREE.CylinderGeometry(.34,.4,.9,12),shirt,0,1.35,0);
+ part(new THREE.SphereGeometry(.3,16,12),skin,0,2.05,0);
+
+ // आंखें और चेहरा
+ part(new THREE.SphereGeometry(.045),black,-.11,2.1,.26);
+ part(new THREE.SphereGeometry(.045),black,.11,2.1,.26);
+ part(new THREE.ConeGeometry(.07,.15,8),skin,0,1.98,.31);
+ part(new THREE.BoxGeometry(.14,.035,.03),black,0,1.88,.29);
+
+ // हाथ, उंगलियां और पैर
+ for(const s of [-1,1]){
+  part(new THREE.CylinderGeometry(.12,.14,.75,10),shirt,s*.48,1.35,0);
+  part(new THREE.SphereGeometry(.13),skin,s*.48,.91,.03);
+  for(let f=0;f<4;f++){
+   part(new THREE.CylinderGeometry(.025,.025,.15,6),
+    skin,s*.48+(f-1.5)*.045,.78,.04);
+  }
+  part(new THREE.CylinderGeometry(.16,.18,.75,10),pants,s*.19,.43,0);
+  part(new THREE.BoxGeometry(.28,.15,.48),black,s*.19,.08,.08);
+ }
+
+ // हाथ में बंदूक
+ part(new THREE.BoxGeometry(.15,.15,1),black,.42,1.25,.62);
+ part(new THREE.BoxGeometry(.18,.2,.25),material(0x555555),.42,1.2,.2);
+ return g;
+}
+
+const player=makeHuman(0x1687d5);
 scene.add(player);
-const gun=new THREE.Group();
-add(gun,new THREE.BoxGeometry(.12,.13,.7),0x202020,0,0,0);
-add(gun,new THREE.BoxGeometry(.1,.2,.14),0x555555,0,-.13,.1);
-gun.position.set(.4,1.3,.48);player.add(gun);
+player.position.set(0,0,0);
 
-// Trees
-function tree(x,z){
-const t=new THREE.Group();
-add(t,new THREE.CylinderGeometry(.15,.22,2,8),0x754b2c,0,1,0);
-add(t,new THREE.SphereGeometry(1.15,12,10),0x176b2b,0,2.5,0);
-add(t,new THREE.SphereGeometry(.7,10,10),0x318b35,.5,2.8,0);
-t.position.set(x,0,z);scene.add(t);
-}
-for(let i=0;i<75;i++){
-let x=(Math.random()-.5)*150,z=(Math.random()-.5)*180;
-if(Math.abs(x)>11)tree(x,z);
-}
-
-// Houses with doorways
-function house(x,z){
-const h=new THREE.Group();
-add(h,new THREE.BoxGeometry(10,.2,9),0x888888,0,.1,0);
-add(h,new THREE.BoxGeometry(10,4,.3),0xd1b58c,0,2,-4.5);
-add(h,new THREE.BoxGeometry(.3,4,9),0xd1b58c,-5,2,0);
-add(h,new THREE.BoxGeometry(.3,4,9),0xd1b58c,5,2,0);
-add(h,new THREE.BoxGeometry(3.5,4,.3),0xd1b58c,-3.25,2,4.5);
-add(h,new THREE.BoxGeometry(3.5,4,.3),0xd1b58c,3.25,2,4.5);
-add(h,new THREE.BoxGeometry(10.5,.4,9.5),0x783b2c,0,4.1,0);
-h.position.set(x,0,z);scene.add(h);
-}
-house(20,-25);house(-25,-35);house(25,30);house(-30,30);
-
-// Car
-const car=new THREE.Group();
-add(car,new THREE.BoxGeometry(4,.8,7),0xc52222,0,.9,0);
-add(car,new THREE.BoxGeometry(3,1.1,3.4),0x34566a,0,1.7,-.2);
-for(let x of [-2,2])for(let z of [-2.2,2.2]){
-const w=add(car,new THREE.CylinderGeometry(.55,.55,.35,16),0x171717,x,.5,z);
-w.rotation.z=Math.PI/2;
-}
-car.position.set(7,0,8);scene.add(car);
-
-// Friends
-const friends=[];
-for(let i=0;i<3;i++){
-const f=human(0x239a73);
-f.position.set(-5+i*4,0,-8-i*3);
-const fg=add(f,new THREE.BoxGeometry(.12,.12,.65),0x202020,.4,1.3,.4);
-f.userData.last=0;
-scene.add(f);friends.push(f);
-}
-
-// Enemies
 const enemies=[];
-for(let i=0;i<8;i++){
-const e=human(0x9d2929);
-e.position.set(Math.random()*55-27,0,Math.random()*55-27);
-scene.add(e);enemies.push({mesh:e,hp:100});
+const friends=[];
+
+function makeBot(color,friend=false){
+ const obj=makeHuman(color);
+ scene.add(obj);
+ obj.position.set((Math.random()-.5)*75,0,(Math.random()-.5)*75);
+ obj.userData={hp:100,fire:0,friend};
+ (friend?friends:enemies).push(obj);
+}
+for(let i=0;i<8;i++)makeBot(0xa52a2a);
+for(let i=0;i<2;i++)makeBot(0x23aa66,true);
+
+// कार
+const car=new THREE.Group();
+scene.add(car);
+addBox(car,3,1,5,0x1565c0,0,.8,0);
+addBox(car,2.5,1.1,2.4,0x83b7d5,0,1.7,-.2);
+for(const s of [-1,1]){
+ for(const z of [-1.6,1.6]){
+  const wheel=new THREE.Mesh(
+   new THREE.CylinderGeometry(.55,.55,.35,16),material(0x111111));
+  wheel.rotation.z=Math.PI/2;
+  wheel.position.set(s*1.55,.55,z);
+  car.add(wheel);
+ }
+}
+car.position.set(15,0,10);
+
+let driving=false;
+let inside=false;
+let health=100;
+let ammo=30;
+let weapon=0;
+const guns=['AK47','MP40','SHOTGUN','SNIPER'];
+const capacities=[30,40,8,5];
+let yaw=0;
+let pitch=0;
+let joyX=0,joyY=0;
+let fireHeld=false;
+let lastShot=0;
+let jumpSpeed=0;
+let onGround=true;
+let gameStarted=false;
+let gameOver=false;
+let kills=0;
+let messageTimer=0;
+
+const $=id=>document.getElementById(id);
+function message(t){
+ $('message').textContent=t;
+ messageTimer=2.5;
+}
+function updateHUD(){
+ $('healthText').textContent=Math.max(0,Math.floor(health));
+ $('hp').style.width=Math.max(0,health)+'%';
+ $('bullets').textContent=ammo;
+ $('weapon').textContent=guns[weapon];
+ $('count').textContent=enemies.filter(e=>e.userData.hp>0).length;
 }
 
-// Input
-const keys={};
-document.querySelectorAll('[data-k]').forEach(b=>{
-const k=b.dataset.k;
-b.onpointerdown=e=>{e.preventDefault();keys[k]=true};
-b.onpointerup=()=>keys[k]=false;
-b.onpointerleave=()=>keys[k]=false;
-b.onpointercancel=()=>keys[k]=false;
+function sound(freq=110){
+ try{
+  const ctx=new AudioContext();
+  const osc=ctx.createOscillator();
+  const gain=ctx.createGain();
+  osc.type='sawtooth';
+  osc.frequency.value=freq;
+  gain.gain.setValueAtTime(.12,ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.13);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime+.14);
+ }catch(e){}
+}
+
+function startGame(){
+ $('start').style.display='none';
+ gameStarted=true;
+ message('लड़ाई शुरू! दुश्मनों को हराओ!');
+}
+
+// मोबाइल joystick
+const joy=$('joy'),stick=$('stick');
+let joyPointer=null;
+function moveJoy(e){
+ const r=joy.getBoundingClientRect();
+ let dx=e.clientX-(r.left+r.width/2);
+ let dy=e.clientY-(r.top+r.height/2);
+ const len=Math.hypot(dx,dy);
+ if(len>40){dx=dx/len*40;dy=dy/len*40}
+ joyX=dx/40;
+ joyY=dy/40;
+ stick.style.left=(35+dx)+'px';
+ stick.style.top=(35+dy)+'px';
+}
+joy.addEventListener('pointerdown',e=>{
+ joyPointer=e.pointerId;
+ joy.setPointerCapture(e.pointerId);
+ moveJoy(e);
 });
-addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
-addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-
-let hp=100,ammo=30,kills=0,inCar=false,speed=0,angle=0;
-let jumping=false,vy=0,audio;
-
-function sound(){
-try{
-audio ||= new (window.AudioContext||window.webkitAudioContext)();
-if(audio.state==='suspended')audio.resume();
-const o=audio.createOscillator(),g=audio.createGain();
-o.type='sawtooth';
-o.frequency.setValueAtTime(140,audio.currentTime);
-o.frequency.exponentialRampToValueAtTime(35,audio.currentTime+.14);
-g.gain.setValueAtTime(.4,audio.currentTime);
-g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.18);
-o.connect(g);g.connect(audio.destination);
-o.start();o.stop(audio.currentTime+.18);
-}catch(e){}
-}
-
-function shoot(from,damage=50){
-if(ammo<=0)return;
-ammo--;sound();
-let target=null,d=30;
-enemies.forEach(e=>{
-if(e.hp<=0)return;
-const n=from.position.distanceTo(e.mesh.position);
-if(n<d){d=n;target=e}
+joy.addEventListener('pointermove',e=>{
+ if(e.pointerId===joyPointer)moveJoy(e);
 });
-if(target){
-target.hp-=damage;
-if(target.hp<=0){
-target.mesh.visible=false;kills++;
-document.getElementById('kills').textContent=kills;
+function resetJoy(){
+ joyPointer=null;joyX=0;joyY=0;
+ stick.style.left='34px';stick.style.top='34px';
 }
-}
-document.getElementById('ammo').textContent=ammo;
-}
-document.getElementById('fire').onclick=()=>{if(!inCar)shoot(player)};
-document.getElementById('reload').onclick=()=>{
-ammo=30;document.getElementById('ammo').textContent=ammo;
+joy.addEventListener('pointerup',resetJoy);
+joy.addEventListener('pointercancel',resetJoy);
+
+// स्क्रीन पर उंगली से कैमरा घुमाना
+let lookPointer=null,lastX=0,lastY=0;
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(e.clientX<innerWidth*.35 && e.clientY>innerHeight*.55)return;
+ lookPointer=e.pointerId;
+ lastX=e.clientX;lastY=e.clientY;
+});
+renderer.domElement.addEventListener('pointermove',e=>{
+ if(e.pointerId!==lookPointer)return;
+ yaw-=(e.clientX-lastX)*.006;
+ pitch=Math.max(-.5,Math.min(.5,pitch+(e.clientY-lastY)*.004));
+ lastX=e.clientX;lastY=e.clientY;
+});
+renderer.domElement.addEventListener('pointerup',()=>lookPointer=null);
+renderer.domElement.addEventListener('pointercancel',()=>lookPointer=null);
+
+// कंप्यूटर कीबोर्ड
+window.addEventListener('keydown',e=>{
+ keys[e.key.toLowerCase()]=true;
+ if(e.key===' ')jump();
+ if(e.key.toLowerCase()==='f')shoot();
+ if(e.key.toLowerCase()==='e')toggleCar();
+});
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+
+// बटन
+$('fire').addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;shoot()});
+$('fire').addEventListener('pointerup',()=>fireHeld=false);
+$('fire').addEventListener('pointercancel',()=>fireHeld=false);
+$('fire').addEventListener('pointerleave',()=>fireHeld=false);
+
+$('jump').onclick=jump;
+$('change').onclick=()=>{
+ weapon=(weapon+1)%guns.length;
+ ammo=capacities[weapon];
+ updateHUD();
+ message('गन बदली: '+guns[weapon]);
 };
-document.getElementById('jump').onclick=()=>{
-if(!jumping&&!inCar){jumping=true;vy=.19}
+$('car').onclick=toggleCar;
+$('enter').onclick=toggleHouse;
+$('heal').onclick=()=>{
+ if(health<100){
+  health=Math.min(100,health+35);
+  updateHUD();
+  message('मेडिकिट इस्तेमाल हुआ!');
+ }else message('हेल्थ पूरी है!');
 };
+
+function jump(){
+ if(onGround && !driving){
+  jumpSpeed=.22;
+  onGround=false;
+ }
+}
+
 function toggleCar(){
-if(!inCar&&player.position.distanceTo(car.position)<8){
-inCar=true;player.visible=false;
-}else if(inCar){
-inCar=false;player.visible=true;
-player.position.copy(car.position);player.position.x+=3;
+ if(!driving && player.position.distanceTo(car.position)<5){
+  driving=true;
+  player.visible=false;
+  message('गाड़ी में बैठ गए!');
+ }else if(driving){
+  driving=false;
+  player.visible=true;
+  player.position.copy(car.position);
+  player.position.x+=4;
+  message('गाड़ी से बाहर आ गए!');
+ }else message('गाड़ी के पास जाओ!');
 }
-}
-document.getElementById('carBtn').onclick=toggleCar;
-addEventListener('keydown',e=>{
-if(e.key.toLowerCase()==='e')toggleCar();
-if(e.key.toLowerCase()==='f'&&!inCar)shoot(player);
-});
 
-const clock=new THREE.Clock();
+function toggleHouse(){
+ let nearest=null,dist=999;
+ for(const h of houses){
+  const d=player.position.distanceTo(new THREE.Vector3(h.x,0,h.z));
+  if(d<dist){dist=d;nearest=h;}
+ }
+ if(nearest && dist<10){
+  inside=!inside;
+  if(inside){
+   player.position.set(nearest.x,0,nearest.z);
+   message('घर के अंदर आ गए!');
+  }else{
+   player.position.z+=7;
+   message('घर से बाहर आ गए!');
+  }
+ }else message('घर के पास जाओ!');
+}
+
+// गोली का इफेक्ट
+function bulletEffect(from,to){
+ const geo=new THREE.BufferGeometry().setFromPoints([from,to]);
+ const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffee77}));
+ scene.add(line);
+ setTimeout(()=>scene.remove(line),90);
+}
+
+function shoot(){
+ if(!gameStarted||gameOver||driving)return;
+ const now=performance.now();
+ const delay=[180,100,550,850][weapon];
+ if(now-lastShot<delay)return;
+ lastShot=now;
+ if(ammo<=0){
+  message('गोली खत्म! गन बदलो।');
+  return;
+ }
+ ammo--;
+ sound(weapon===1?180:100);
+ const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+ const origin=player.position.clone().add(new THREE.Vector3(0,1.3,0));
+ const target=origin.clone().add(forward.multiplyScalar(55));
+ bulletEffect(origin,target);
+
+ let nearest=null,dist=999;
+ for(const e of enemies){
+  if(e.userData.hp<=0)continue;
+  const d=player.position.distanceTo(e.position);
+  const direction=e.position.clone().sub(player.position).normalize();
+  const facing=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  if(direction.dot(facing)>.86 && d<dist){
+   nearest=e;dist=d;
+  }
+ }
+ if(nearest && dist<55){
+  nearest.userData.hp-=weapon===2?55:weapon===3?100:25;
+  if(nearest.userData.hp<=0){
+   nearest.visible=false;
+   kills++;
+   message('दुश्मन खत्म! Kills: '+kills);
+  }else message('दुश्मन को गोली लगी!');
+ }
+ updateHUD();
+}
+
+// दुश्मन और दोस्त की AI
+function botAI(bot,friend,dt){
+ if(bot.userData.hp<=0)return;
+ let target=player;
+ if(friend){
+  let best=999;
+  for(const e of enemies){
+   if(e.userData.hp<=0)continue;
+   const d=bot.position.distanceTo(e.position);
+   if(d<best){best=d;target=e;}
+  }
+ }else{
+  target=player;
+ }
+ const diff=target.position.clone().sub(bot.position);
+ const d=diff.length();
+ if(d>5){
+  diff.normalize();
+  bot.position.addScaledVector(diff,dt*(friend?2.4:1.5));
+  bot.rotation.y=Math.atan2(-diff.x,-diff.z);
+ }
+ bot.userData.fire-=dt;
+ if(d<24 && bot.userData.fire<=0){
+  bot.userData.fire=friend?.9:1.5;
+  sound(friend?160:90);
+  if(friend){
+   target.userData.hp-=12;
+   if(target.userData.hp<=0){
+    target.visible=false;
+    message('दोस्त ने दुश्मन को हराया!');
+   }
+  }else{
+   health=Math.max(0,health-5);
+   updateHUD();
+   if(health<=0)endGame(false);
+  }
+ }
+}
+
+function endGame(win){
+ if(gameOver)return;
+ gameOver=true;
+ message(win?'🏆 YOU WIN!':'GAME OVER');
+ $('start').style.display='grid';
+ $('start').innerHTML='<div><h1>'+(win?'🏆 YOU WIN!':'💀 GAME OVER')+'</h1><p>Kills: '+kills+'</p><button onclick="location.reload()">PLAY AGAIN</button></div>';
+}
+
+// मिनी मैप
+function drawMap(){
+ const c=$('map').getContext('2d');
+ c.clearRect(0,0,100,100);
+ c.fillStyle='#315b32';c.fillRect(0,0,100,100);
+ c.fillStyle='#777';c.fillRect(46,0,8,100);
+ function dot(x,z,color){
+  c.fillStyle=color;
+  c.beginPath();
+  c.arc(50+x*.4,50+z*.4,3,0,Math.PI*2);
+  c.fill();
+ }
+ dot(player.position.x,player.position.z,'#00ffff');
+ enemies.forEach(e=>{if(e.userData.hp>0)dot(e.position.x,e.position.z,'red')});
+ friends.forEach(e=>{if(e.userData.hp>0)dot(e.position.x,e.position.z,'lime')});
+}
+
 function animate(){
-requestAnimationFrame(animate);
-const dt=Math.min(clock.getDelta(),.04);
-const up=keys.up||keys.w,down=keys.down||keys.s;
-const left=keys.left||keys.a,right=keys.right||keys.d;
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+ if(gameStarted&&!gameOver){
+  if(messageTimer>0){
+   messageTimer-=dt;
+   if(messageTimer<=0)$('message').textContent='लड़ाई जारी है!';
+  }
 
-if(inCar){
-speed+=(Number(up)-Number(down))*dt*13;
-speed*=.985;speed=THREE.MathUtils.clamp(speed,-12,22);
-car.rotation.y+=(Number(right)-Number(left))*dt*1.5;
-car.translateZ(-speed*dt);
-}else{
-if(left)angle+=dt*2;
-if(right)angle-=dt*2;
-player.rotation.y=angle;
-player.translateZ(-(Number(up)-Number(down))*8*dt);
-if(jumping){
-player.position.y+=vy;vy-=.009;
-if(player.position.y<=0){player.position.y=0;jumping=false}
-}
-}
+  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
 
-// Friends attack nearby enemies
-friends.forEach(f=>{
-let target=null,d=35;
-enemies.forEach(e=>{
-if(e.hp<=0)return;
-let n=f.position.distanceTo(e.mesh.position);
-if(n<d){d=n;target=e}
-});
-if(target){
-f.lookAt(target.mesh.position);
-if(performance.now()-f.userData.last>1100){
-target.hp-=10;f.userData.last=performance.now();sound();
-if(target.hp<=0){
-target.mesh.visible=false;kills++;
-document.getElementById('kills').textContent=kills;
-}
-}
-}
-});
+  let mx=joyX+(keys.d?1:0)-(keys.a?1:0);
+  let mz=joyY+(keys.s?1:0)-(keys.w?1:0);
+  const move=new THREE.Vector3();
+  move.addScaledVector(right,mx);
+  move.addScaledVector(forward,-mz);
+  if(move.length()>1)move.normalize();
 
-// Enemies follow player
-enemies.forEach(e=>{
-if(e.hp<=0||inCar)return;
-let d=e.mesh.position.distanceTo(player.position);
-if(d>4&&d<35){
-let dir=player.position.clone().sub(e.mesh.position).normalize();
-e.mesh.position.addScaledVector(dir,dt*1.2);
-}
-if(d<4)hp=Math.max(0,hp-dt*2);
-});
+  if(driving){
+   car.position.addScaledVector(move,dt*22);
+   car.rotation.y=yaw;
+   camera.position.set(
+    car.position.x+Math.sin(yaw)*9,
+    car.position.y+7,
+    car.position.z+Math.cos(yaw)*9
+   );
+   camera.lookAt(car.position.x,car.position.y+1,car.position.z);
+  }else{
+   player.position.addScaledVector(move,dt*9);
+   player.rotation.y=yaw;
+   if(!onGround){
+    player.position.y+=jumpSpeed*60*dt;
+    jumpSpeed-=.012;
+    if(player.position.y<=0){
+     player.position.y=0;
+     jumpSpeed=0;
+     onGround=true;
+    }
+   }
+   const camOffset=new THREE.Vector3(
+    Math.sin(yaw)*7,
+    3.4+pitch*3,
+    Math.cos(yaw)*7
+   );
+   camera.position.copy(player.position).add(camOffset);
+   camera.lookAt(
+    player.position.x,
+    player.position.y+1.3,
+    player.position.z
+   );
+  }
 
-const target=inCar?car:player;
-const offset=new THREE.Vector3(0,6,11).applyQuaternion(target.quaternion);
-camera.position.lerp(target.position.clone().add(offset),.12);
-camera.lookAt(target.position.clone().add(new THREE.Vector3(0,1.3,0)));
+  // नक्शे की सीमा
+  player.position.x=THREE.MathUtils.clamp(player.position.x,-105,105);
+  player.position.z=THREE.MathUtils.clamp(player.position.z,-105,105);
 
-document.getElementById('hp').textContent=Math.floor(hp);
-document.getElementById('mode').textContent=inCar?'Driving':'Walking';
-renderer.render(scene,camera);
+  enemies.forEach(e=>botAI(e,false,dt));
+  friends.forEach(e=>botAI(e,true,dt));
+
+  if(fireHeld)shoot();
+  updateHUD();
+  drawMap();
+
+  if(enemies.every(e=>e.userData.hp<=0))endGame(true);
+ }
+ renderer.render(scene,camera);
 }
 animate();
 
-addEventListener('resize',()=>{
-camera.aspect=innerWidth/innerHeight;
-camera.updateProjectionMatrix();
-renderer.setSize(innerWidth,innerHeight);
+window.addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
 });
+updateHUD();
 </script>
 </body>
-  </html>
-  
+</html>
